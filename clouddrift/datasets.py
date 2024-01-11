@@ -147,6 +147,8 @@ def gdp6h(decode_times: bool = True) -> xr.Dataset:
     if os.name == "nt":
         ds = xr.open_dataset(url + "#mode=bytes", decode_times=decode_times, engine="h5netcdf")
     else:
+        import h5py
+        h5py._errors.unsilence_errors()
         ds = xr.open_dataset(url + "#mode=bytes", decode_times=decode_times)
 
     ds = ds.rename_vars({"ID": "id"}).assign_coords({"id": ds.ID}).drop_vars(["ids"])
