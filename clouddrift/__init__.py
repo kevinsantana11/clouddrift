@@ -20,9 +20,9 @@ __all__ = [
     "datasets",
     "kinematics",
     "pairs",
-    "plotting", 
+    "plotting",
     "ragged",
-    "signal", 
-    "sphere", 
-    "wavelet"
+    "signal",
+    "sphere",
+    "wavelet",
 ]

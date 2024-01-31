@@ -338,12 +338,14 @@ def pair_bounding_box_overlap(
     # First get the bounding box of each trajectory.
     # We unwrap the longitudes before computing min/max because we want to
     # consider trajectories that cross the dateline.
-    lon1_min, lon1_max = np.min(np.unwrap(lon1, period=360)), np.max(
-        np.unwrap(lon1, period=360)
+    lon1_min, lon1_max = (
+        np.min(np.unwrap(lon1, period=360)),
+        np.max(np.unwrap(lon1, period=360)),
     )
     lat1_min, lat1_max = np.min(lat1), np.max(lat1)
-    lon2_min, lon2_max = np.min(np.unwrap(lon2, period=360)), np.max(
-        np.unwrap(lon2, period=360)
+    lon2_min, lon2_max = (
+        np.min(np.unwrap(lon2, period=360)),
+        np.max(np.unwrap(lon2, period=360)),
     )
     lat2_min, lat2_max = np.min(lat2), np.max(lat2)
 

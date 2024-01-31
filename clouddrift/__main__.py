@@ -1,52 +1,104 @@
+from typing import Literal, Union
 import click
+import logging
+import os
 
 from clouddrift import adapters
+
+
+_logger = logging.getLogger(__name__)
 
 
 @click.group()
 def cli():
     pass
 
+
 @cli.command(help="Download individual NetCDF files from the AOML server")
 @click.option(
-    "--drifter-ids", 
-    type=str, 
-    default=None, 
-    help="List of drifter to retrieve (Default: all)"
-)
-@click.option(
-    "--sample", 
-    type=int,
-    default=None, 
-    help="Randomly select n_random_id drifter IDs to download (Default: None)"
-)
-@click.option(
-    "--url", 
+    "--drifter-ids",
     type=str,
-    default=adapters.gdp1h.GDP_DATA_URL, 
-    help=f"URL from which to download the data (Default: {adapters.gdp1h.GDP_DATA_URL})"
+    default=None,
+    help="List of drifter to retrieve (Default: all)",
 )
 @click.option(
-    "--path", 
+    "--sample",
+    type=int,
+    default=None,
+    help="Randomly select n_random_id drifter IDs to download (Default: None)",
+)
+@click.option(
+    "--url",
+    type=str,
+    default=adapters.gdp1h.GDP_DATA_URL,
+    help=f"URL from which to download the data (Default: {adapters.gdp1h.GDP_DATA_URL})",
+)
+@click.option(
+    "--path",
     type=click.Path(exists=False),
-    default=adapters.gdp1h.GDP_TMP_PATH, 
-    help=f"Path to the directory where the individual NetCDF files are stored (Default: {adapters.gdp1h.GDP_TMP_PATH})"
+    default=adapters.gdp1h.GDP_TMP_PATH,
+    help=f"Path to the directory where the individual NetCDF files are stored (Default: {adapters.gdp1h.GDP_TMP_PATH})",
 )
 @click.option(
-    "--experimental/--no-experimental", 
-    default=False, 
-    help=f"If true will instead use the experimental URL and tmp paths.This will override any values passed to url \
-    and tmp-path (Default: False). Experimental values (url, path), \
-    ({adapters.gdp1h.GDP_DATA_URL_EXPERIMENTAL}, {adapters.gdp1h.GDP_TMP_PATH_EXPERIMENTAL})"
+    "--experimental/--no-experimental",
+    type=bool,
+    default=False,
+    help=f"If true will instead use the experimental URL.This will override the value passed to the url \
+    option(Default: False). Experimental URL ({adapters.gdp1h.GDP_DATA_URL_EXPERIMENTAL})",
 )
-def gdp1h(drifter_ids, sample, url, path, experimental):
+@click.option(
+    "--aggregate/--no-aggregate",
+    type=bool,
+    default=True,
+    help=f"If true will aggregate all of the drifter data into one NETCDF file. (Default: True)",
+)
+@click.option(
+    "--log-level",
+    type=click.Choice(
+        ["DEBUG", "INFO", "WARN", "ERROR", "CRITICAL"], case_sensitive=False
+    ),
+    default="INFO",
+    help=f"If true will aggregate all of the drifter data into one NETCDF file. (Default: True)",
+)
+def gdp1h(
+    drifter_ids: str,
+    sample: int,
+    url: str,
+    path: str,
+    experimental: bool,
+    aggregate: bool,
+    log_level: str,
+):
     if experimental:
         url = adapters.gdp1h.GDP_DATA_URL_EXPERIMENTAL
-        path = adapters.gdp1h.GDP_TMP_PATH_EXPERIMENTAL
 
-    print(f"INPUTS:: \ndrifter-ids: {drifter_ids}\nsample: {sample}\nurl: {url}\ntmp_path: {path}\nexp: {experimental}")
-    adapters.gdp1h.download(drifter_ids, sample, url, path)
+    logging.basicConfig(level=log_level.upper(),
+                        format="[%(asctime)s][%(levelname)s][%(module)s][%(funcName)s][Ln %(lineno)s] - %(message)s")
 
+    labels = map(lambda kv: f"({kv[0]}: {kv[1]})", [
+        ("drifter_ids", drifter_ids),
+        ("sample", sample),
+        ("url", url),
+        ("path", path),
+        ("experimental", experimental),
+        ("aggregate", aggregate),
+        ("log_level", log_level),
+    ])
+    cli_inputs = ", ".join(labels)
+    _logger.debug(
+        f"Inputs: {cli_inputs}"
+    )
+    ra = adapters.gdp1h.to_raggedarray(drifter_ids, sample, url, path)
+
+    if aggregate:
+        aggregate_path = f"{path}/aggregate"
+        os.makedirs(aggregate_path, exist_ok=True)
+
+        aggregate_file_path = f"{aggregate_path}/gdp1h.nc"
+        _logger.info(
+            f"Generating and storing aggregated gdp1h data to: ({aggregate_file_path})"
+        )
+        ra.to_netcdf(aggregate_file_path)
 
 
 if __name__ == "__main__":

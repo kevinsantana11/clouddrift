@@ -14,8 +14,10 @@ import re
 import tempfile
 from typing import Optional
 import os
+import logging
 import warnings
 import xarray as xr
+
 
 GDP_VERSION = "2.01"
 
@@ -46,6 +48,8 @@ GDP_DATA = [
     "flg_sst2",
     "drogue_status",
 ]
+
+_logger = logging.getLogger(__name__)
 
 
 def download(
@@ -78,7 +82,7 @@ def download(
     if tmp_path is None:
         tmp_path = GDP_TMP_PATH if url == GDP_DATA_URL else GDP_TMP_PATH_EXPERIMENTAL
 
-    print(f"Downloading GDP hourly data from {url} to {tmp_path}...")
+    _logger.debug(f"Downloading GDP hourly data from ({url}) to ({tmp_path})")
 
     # Create a temporary directory if doesn't already exists.
     os.makedirs(tmp_path, exist_ok=True)
@@ -100,7 +104,7 @@ def download(
     # retrieve only a subset of n_random_id trajectories
     if n_random_id:
         if n_random_id > len(drifter_ids):
-            warnings.warn(
+            _logger.warn(
                 f"Retrieving all listed trajectories because {n_random_id} is larger than the {len(drifter_ids)} listed trajectories."
             )
         else:
@@ -601,11 +605,11 @@ def to_raggedarray(
     )
 
     # set dynamic global attributes
-    ra.attrs_global["time_coverage_start"] = (
-        f"{datetime(1970,1,1) + timedelta(seconds=int(np.min(ra.coords['time']))):%Y-%m-%d:%H:%M:%SZ}"
-    )
-    ra.attrs_global["time_coverage_end"] = (
-        f"{datetime(1970,1,1) + timedelta(seconds=int(np.max(ra.coords['time']))):%Y-%m-%d:%H:%M:%SZ}"
-    )
+    ra.attrs_global[
+        "time_coverage_start"
+    ] = f"{datetime(1970,1,1) + timedelta(seconds=int(np.min(ra.coords['time']))):%Y-%m-%d:%H:%M:%SZ}"
+    ra.attrs_global[
+        "time_coverage_end"
+    ] = f"{datetime(1970,1,1) + timedelta(seconds=int(np.max(ra.coords['time']))):%Y-%m-%d:%H:%M:%SZ}"
 
     return ra

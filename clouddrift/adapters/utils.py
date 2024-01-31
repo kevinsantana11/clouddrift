@@ -1,6 +1,7 @@
 from io import BufferedIOBase
 from typing import Callable, List, NamedTuple, Union
 import os
+import logging
 import datetime
 from tqdm import tqdm
 import requests
@@ -15,7 +16,8 @@ import concurrent.futures
 
 
 _CHUNK_SIZE = 1024
-_ID_FUNC = lambda x: x
+
+_logger = logging.getLogger(__name__)
 
 
 class _DownloadRequest(NamedTuple):
@@ -24,16 +26,38 @@ class _DownloadRequest(NamedTuple):
 
 
 def download_with_progress(
-    download_map: List[_DownloadRequest], prewrite_func=_ID_FUNC
+    download_map: List[_DownloadRequest],
+    prewrite_func=lambda x: x,
+    show_list_progress: Union[bool, None] = None,
 ):
+    if show_list_progress is None:
+        show_list_progress = len(download_map) > 20
+
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = {
-            executor.submit(_download_with_progress, src, dst, prewrite_func): src
+            executor.submit(
+                _download_with_progress, src, dst, not show_list_progress, prewrite_func
+            ): src
             for (src, dst) in download_map
         }
-        for fut in concurrent.futures.as_completed(futures):
-            url = futures[fut]
-            print(f"Finished downloading: {url}")
+        try:
+            bar = None
+            if show_list_progress:
+                bar = tqdm(
+                    desc="Downloading files from server",
+                    total=len(futures),
+                    unit="Files",
+                )
+
+            for fut in concurrent.futures.as_completed(futures):
+                if fut.exception(0):
+                    _logger.error(f"Got an exception!, e: {fut.exception(0)}")
+                    raise fut.exception()
+                if bar is not None:
+                    bar.update(1)
+        finally:
+            if bar is not None:
+                bar.close()
 
 
 @retry(
@@ -46,10 +70,11 @@ def download_with_progress(
 def _download_with_progress(
     url: str,
     output: Union[BufferedIOBase, str],
+    show_progress: bool,
     prewrite_func: Callable[[bytes], Union[str, bytes]],
 ):
     if isinstance(output, str) and os.path.exists(output):
-        print(f"File exists {output} checking for updates...")
+        _logger.debug(f"File exists {output} checking for updates...")
         local_last_modified = os.path.getmtime(output)
 
         # Get last modified time of the remote file
@@ -61,6 +86,7 @@ def _download_with_progress(
 
                 # compare with local modified time
                 if local_last_modified >= remote_last_modified.timestamp():
+                    _logger.debug(f"File: {output} is up to date; skip download.")
                     warnings.warn(
                         f"{output} already exists and is up to date; skip download."
                     )
@@ -70,7 +96,7 @@ def _download_with_progress(
                     "Cannot determine the file has been updated on the remote source. \
                               'Last-Modified' header not present."
                 )
-    print(f"Downloading from {url} to {output}...")
+    _logger.debug(f"Downloading from {url} to {output}...")
 
     force_close = False
     try:
@@ -79,31 +105,33 @@ def _download_with_progress(
             buffer = open(output, "wb")
         else:
             buffer = output
-        bar = tqdm(
-            desc=url,
-            total=int(response.headers.get("Content-Length", 0)),
-            unit="B",
-            unit_scale=True,
-            unit_divisor=1024,
-        )
+
+        bar = None
+        if show_progress:
+            bar = tqdm(
+                desc=url,
+                total=int(response.headers.get("Content-Length", None)),
+                unit="B",
+                nrows=2,
+                unit_scale=True,
+                unit_divisor=1024,
+            )
 
         for chunk in response.iter_content(_CHUNK_SIZE):
             if not chunk:
                 break
             buffer.write(prewrite_func(chunk))
-            bar.update(len(chunk))
+            if bar is not None:
+                bar.update(len(chunk))
     except Exception as e:
-        import traceback as tb
-
         force_close = True
         error_msg = f"Error downloading data file: {url} to: {output}, error: {e}"
-        print(error_msg)
-        tb.print_exc()
+        _logger.error(error_msg)
         raise RuntimeError(error_msg)
     finally:
         if response is not None:
             response.close()
-        if buffer is not None and not isinstance(buffer, BufferedIOBase) or force_close:
+        if buffer is not None and not isinstance(output, BufferedIOBase) or force_close:
             print(f"closing buffer {buffer}")
             buffer.close()
         if bar is not None:
