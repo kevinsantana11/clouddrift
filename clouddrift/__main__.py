@@ -1,4 +1,3 @@
-from typing import Literal, Union
 import click
 import logging
 import os
@@ -50,7 +49,7 @@ def cli():
     "--aggregate/--no-aggregate",
     type=bool,
     default=True,
-    help=f"If true will aggregate all of the drifter data into one NETCDF file. (Default: True)",
+    help="If true will aggregate all of the drifter data into one NETCDF file. (Default: True)",
 )
 @click.option(
     "--log-level",
@@ -58,7 +57,7 @@ def cli():
         ["DEBUG", "INFO", "WARN", "ERROR", "CRITICAL"], case_sensitive=False
     ),
     default="INFO",
-    help=f"If true will aggregate all of the drifter data into one NETCDF file. (Default: True)",
+    help="Log level to be printed to stdout. (Default: INFO)",
 )
 def gdp1h(
     drifter_ids: str,

@@ -2,7 +2,7 @@ from io import BufferedIOBase
 from typing import Callable, List, NamedTuple, Union
 import os
 import logging
-import datetime
+from datetime import datetime
 from tqdm import tqdm
 import requests
 import warnings
@@ -62,7 +62,7 @@ def download_with_progress(
 
 @retry(
     retry=retry_if_exception(
-        lambda ex: isinstance(ex, [requests.Timeout, requests.HTTPError])
+        lambda ex: isinstance(ex, (requests.Timeout, requests.HTTPError))
     ),
     wait=wait_exponential_jitter(initial=0.25),
     stop=stop_after_attempt(10),
@@ -87,15 +87,11 @@ def _download_with_progress(
                 # compare with local modified time
                 if local_last_modified >= remote_last_modified.timestamp():
                     _logger.debug(f"File: {output} is up to date; skip download.")
-                    warnings.warn(
-                        f"{output} already exists and is up to date; skip download."
-                    )
                     return False
             else:
-                warnings.warn(
-                    "Cannot determine the file has been updated on the remote source. \
+                _logger.warn("Cannot determine the file has been updated on the remote source. \
                               'Last-Modified' header not present."
-                )
+)
     _logger.debug(f"Downloading from {url} to {output}...")
 
     force_close = False

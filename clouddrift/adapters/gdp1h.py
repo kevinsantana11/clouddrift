@@ -139,7 +139,7 @@ def preprocess(index: int, **kwargs) -> xr.Dataset:
     ds : xr.Dataset
         Xarray Dataset containing the data and attributes
     """
-    ds = xr.load_dataset(
+    ds = xr.open_dataset(
         os.path.join(kwargs["tmp_path"], kwargs["filename_pattern"].format(id=index)),
         decode_times=False,
         decode_coords=False,
