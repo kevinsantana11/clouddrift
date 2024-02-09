@@ -1,3 +1,4 @@
+import concurrent.futures
 import unittest
 from datetime import datetime, timedelta
 from unittest.mock import Mock, mock_open, patch
@@ -85,6 +86,80 @@ class utils_tests(unittest.TestCase):
                 "some.url.com", "./some/path/existing-file.nc", 0, False, lambda x: x
             )
             self.requests_mock.get.assert_called()
+
+    def test_progress_mechanism_enabled2(self):
+        """
+        Ensure we show progress when user enables the feature
+        """
+        futures_mock = list()
+        def gen_future_mock():
+            nonlocal futures_mock
+            fut = concurrent.futures.Future()
+            futures_mock.append(fut)
+            return fut
+
+        tpe_mock = Mock()
+        tpe_mock.__enter__ = Mock(return_value=tpe_mock)
+        tpe_mock.__exit__ = Mock()
+        tpe_mock.submit = Mock(side_effect=lambda *_, **__: gen_future_mock())
+        futures_mock = Mock()
+        futures_mock.ThreadPoolExecutor = Mock(return_value=tpe_mock)
+        futures_mock.as_completed = Mock(return_value=futures_mock)
+        download_requests = [
+            ("src0", "dst", None),
+            ("src1", "dst", None),
+            ("src2", "dst", None)
+        ]
+
+        with MultiPatcher(
+            [
+                patch(
+                    "clouddrift.adapters.utils.tqdm", Mock(return_value=self.bar_mock)
+                ),
+                patch("clouddrift.adapters.utils.open", self.open_mock),
+                patch("clouddrift.adapters.utils.concurrent.futures", futures_mock),
+                patch("clouddrift.adapters.utils.requests", self.requests_mock),
+            ]
+        ) as mock:
+            utils.download_with_progress(download_requests)
+            mock[0].assert_not_called()
+            self.bar_mock.update.assert_not_called()
+
+    def test_progress_mechanism_enabled3(self):
+        """
+        Ensure we show progress when user enables the feature
+        """
+        futures_mock = list()
+        def gen_future_mock():
+            nonlocal futures_mock
+            fut = concurrent.futures.Future()
+            futures_mock.append(fut)
+            return fut
+
+        tpe_mock = Mock()
+        tpe_mock.__enter__ = Mock(return_value=tpe_mock)
+        tpe_mock.__exit__ = Mock()
+        tpe_mock.submit = Mock(side_effect=lambda *_, **__: gen_future_mock())
+        futures_mock = Mock()
+        futures_mock.ThreadPoolExecutor = Mock(return_value=tpe_mock)
+        futures_mock.as_completed = Mock(return_value=futures_mock)
+        download_requests = [
+            ("src0", "dst", None) for _ in range(0, 21)
+        ]
+
+        with MultiPatcher(
+            [
+                patch(
+                    "clouddrift.adapters.utils.tqdm", Mock(return_value=self.bar_mock)
+                ),
+                patch("clouddrift.adapters.utils.open", self.open_mock),
+                patch("clouddrift.adapters.utils.concurrent.futures", futures_mock),
+                patch("clouddrift.adapters.utils.requests", self.requests_mock),
+            ]
+        ) as mock:
+            utils.download_with_progress(download_requests)
+            mock[0].assert_called()
+            self.bar_mock.update.assert_called()
 
     def test_progress_mechanism_enabled(self):
         """
