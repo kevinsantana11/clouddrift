@@ -19,3 +19,4 @@ dependencies:
   - scipy>=1.11.2
   - zarr>=2.14.2
   - tenacity>=8.2.3
+  - click >=8.1.7
