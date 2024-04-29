@@ -1,5 +1,5 @@
 ---
-title: 'Clouddrift: a Python package to accelerate the use of Lagrangian data for atmospheric, oceanic, and climate sciences'
+title: 'Clouddrift: a Python package to accelerate the use of Lagrangian data for atmospheric, oceanic, and climate sciences (edit)'
 tags:
   - Python
   - climate
