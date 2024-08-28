@@ -422,7 +422,7 @@ class RaggedArray:
                 dimnames = list()
 
                 for dim in ds[var].dims:
-                    if  name_dims[dim] is not None and name_dims[dim] == "obs":
+                    if name_dims[dim] is not None and name_dims[dim] == "obs":
                         continue
                     dimsize = dim_sizes[dim]
                     dimsizes.append(dimsize)
@@ -438,9 +438,9 @@ class RaggedArray:
             if var in ds.keys():
                 dimsizes = list()
                 dimnames = list()
-                
+
                 for dim in ds[var].dims:
-                    if  name_dims[dim] is not None and name_dims[dim] == "rows":
+                    if name_dims[dim] is not None and name_dims[dim] == "rows":
                         continue
                     dimsize = dim_sizes[dim]
                     dimsizes.append(dimsize)
