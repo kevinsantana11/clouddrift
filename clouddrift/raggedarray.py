@@ -417,22 +417,37 @@ class RaggedArray:
         var_dims = {}
         metadata = {}
         for var in name_meta:
-            try:
-                var_dims[var] = ds[var].dims
-                metadata[var] = np.zeros(nb_rows, dtype=ds[var].dtype)
-            except KeyError:
+            if var in ds.keys():
+                dimsizes = list()
+                dimnames = list()
+
+                for dim in ds[var].dims:
+                    if  name_dims[dim] is not None and name_dims[dim] == "obs":
+                        continue
+                    dimsize = dim_sizes[dim]
+                    dimsizes.append(dimsize)
+                    dimnames.append(dim)
+
+                var_dims[var] = dimnames
+                metadata[var] = np.zeros(dimsizes, dtype=ds[var].dtype)
+            else:
                 warnings.warn(f"Variable {var} requested but not found; skipping.")
 
         data = {}
         for var in name_data:
             if var in ds.keys():
-                dims = list()
+                dimsizes = list()
+                dimnames = list()
+                
                 for dim in ds[var].dims:
+                    if  name_dims[dim] is not None and name_dims[dim] == "rows":
+                        continue
                     dimsize = dim_sizes[dim]
-                    dims.append(dimsize)
+                    dimsizes.append(dimsize)
+                    dimnames.append(dim)
 
-                var_dims[var] = ds[var].dims
-                data[var] = np.zeros(dims, dtype=ds[var].dtype)
+                var_dims[var] = dimnames
+                data[var] = np.zeros(dimsizes, dtype=ds[var].dtype)
             else:
                 warnings.warn(f"Variable {var} requested but not found; skipping.")
         ds.close()

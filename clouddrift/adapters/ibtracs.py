@@ -98,7 +98,6 @@ def to_raggedarray(
 
         var: xr.DataArray = ds[var_name]
 
-        # Avoid loading the data variables that also utilize the quadrant dimension for now
         if "obs" in var.dims and len(var.dims) >= 2:
             data_vars.append(var_name)
         elif len(var.dims) == 1 and var.dims[0] == "storm":
