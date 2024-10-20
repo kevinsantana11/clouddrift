@@ -35,7 +35,8 @@ def _rowsize(idx: int, **kwargs):
     ds: xr.Dataset | None = kwargs.get("dataset")
     if ds is None:
         raise ValueError("kwargs dataset missing")
-    return len(ds.isel(storm=idx)["time"].data)
+    storm_ds = ds.isel(storm=idx)
+    return storm_ds["numobs"].data
 
 
 def _preprocess(idx: int, **kwargs):
@@ -44,21 +45,22 @@ def _preprocess(idx: int, **kwargs):
     md_vars: list[str] | None = kwargs.get("md_vars")
 
     if ds is not None and data_vars is not None and md_vars is not None:
-        ds = ds.isel(storm=idx)
+        storm_ds = ds.isel(storm=idx)
+        numobs = storm_ds["numobs"].data
         vars = dict()
 
-        for var in data_vars + list(ds.coords):
+        for var in data_vars + list(storm_ds.coords):
             if var != "time":
-                vars.update({var: (ds[var].dims, ds[var].data)})
+                vars.update({var: (storm_ds[var].dims, storm_ds[var].data[:numobs])})
 
         for var in md_vars:
-            vars.update({var: (("storm",), [ds[var].data])})
+            vars.update({var: (("storm",), [storm_ds[var].data])})
 
         return xr.Dataset(
             vars,
             {
                 "id": (("storm",), np.array([idx])),
-                "time": (("obs",), ds["time"].data),
+                "time": (("obs",), storm_ds["time"].data[:numobs]),
             },
         )
     else:
@@ -87,6 +89,13 @@ def to_raggedarray(
 
     ds = xr.open_dataset(dst_path, engine="netcdf4")
     ds = ds.rename_dims({"date_time": "obs"})
+
+    vars = list()
+    vars.extend(ds.variables)
+    vars -= ds.coords.keys()
+    dtypes = {v: ds[v].dtype for v in vars}
+    dtypes.update({"numobs": np.int64})
+    ds = ds.astype(dtypes)
 
     data_vars = list()
     md_vars = list()
