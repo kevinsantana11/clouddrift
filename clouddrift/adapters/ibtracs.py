@@ -1,6 +1,6 @@
 import os
 import tempfile
-from typing import Literal, TypeAlias
+from typing import Hashable, Literal, TypeAlias
 
 import numpy as np
 import xarray as xr
@@ -90,11 +90,12 @@ def to_raggedarray(
     ds = xr.open_dataset(dst_path, engine="netcdf4")
     ds = ds.rename_dims({"date_time": "obs"})
 
-    vars = list()
-    vars.extend(ds.variables)
-    vars -= ds.coords.keys()
+    vars = list[Hashable]()
+    vars.extend(ds.variables.keys())
+    for coord in ds.coords.keys():
+        vars.remove(coord) 
     dtypes = {v: ds[v].dtype for v in vars}
-    dtypes.update({"numobs": np.int64})
+    dtypes.update({"numobs": np.dtype("int64")})
     ds = ds.astype(dtypes)
 
     data_vars = list()
