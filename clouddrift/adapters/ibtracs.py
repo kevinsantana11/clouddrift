@@ -93,7 +93,7 @@ def to_raggedarray(
     vars = list[Hashable]()
     vars.extend(ds.variables.keys())
     for coord in ds.coords.keys():
-        vars.remove(coord) 
+        vars.remove(coord)
     dtypes = {v: ds[v].dtype for v in vars}
     dtypes.update({"numobs": np.dtype("int64")})
     ds = ds.astype(dtypes)
